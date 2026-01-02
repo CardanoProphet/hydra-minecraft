@@ -1,0 +1,14 @@
+# Ledger, Hydra & Keys
+docker/data
+
+# Setup Services
+docker/setup/check-balance/node_modules
+docker/setup/check-balance/dist
+docker/setup/generate-keys/node_modules
+docker/setup/generate-keys/dist
+docker/setup/generate-keys/keys
+docker/setup/open-hydra-head/node_modules
+docker/setup/open-hydra-head/dist
+
+# Env variables
+.env

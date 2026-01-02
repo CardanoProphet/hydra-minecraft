@@ -1,0 +1,259 @@
+services:
+  hydra-keys:
+    build:
+      context: ./setup/generate-keys/
+      dockerfile: Dockerfile
+    container_name: hydra-keys
+    environment:
+      - KEY_PAIR_COUNT=2
+      - KEYS_DIR=/keys
+    volumes:
+      - ${DATA_DIR}/keys:/keys
+    restart: "no"
+
+  prepare-data:
+    image: busybox:1.36
+    container_name: cardano-prepare-data
+    volumes:
+      - ${DATA_DIR}:/data
+    depends_on:
+      hydra-keys:
+        condition: service_completed_successfully
+    command: >
+      sh -c "mkdir -p /data/cardano/db /data/cardano/ipc /data/hydra/1 /data/hydra/2 &&
+             chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} /data &&
+             chmod -R 775 /data"
+    restart: "no"
+
+  check-balance:
+    build:
+      context: ./setup/check-balance/
+      dockerfile: Dockerfile
+    container_name: check-balance
+    environment:
+      - BLOCKFROST_API_KEY=${BLOCKFROST_API_KEY}
+      - KEYS_DIR=/keys
+    volumes:
+      - ${DATA_DIR}/keys:/keys
+    depends_on:
+      prepare-data:
+        condition: service_completed_successfully
+    restart: "no"
+
+  mithril-bootstrap:
+    image: ${MITHRIL_CLIENT_IMAGE}
+    container_name: mithril-bootstrap
+    depends_on:
+      check-balance:
+        condition: service_completed_successfully
+    entrypoint: []
+    command:
+      - /bin/sh
+      - -c
+      - |
+        if [ -d "/data/db/immutable" ]; then
+          echo "DB already present, skipping mithril-bootstrap"
+          exit 0
+        fi
+        exec /app/bin/mithril-client -vvv cardano-db download --include-ancillary ${SNAPSHOT_DIGEST} --download-dir /data
+    environment:
+      - CARDANO_NETWORK=${CARDANO_NETWORK}
+      - AGGREGATOR_ENDPOINT=${AGGREGATOR_ENDPOINT}
+      - SNAPSHOT_DIGEST=${SNAPSHOT_DIGEST}
+      - GENESIS_VERIFICATION_KEY=${GENESIS_VERIFICATION_KEY}
+      - ANCILLARY_VERIFICATION_KEY=${ANCILLARY_VERIFICATION_KEY}
+    volumes:
+      - ${DATA_DIR}/cardano:/data
+
+    restart: "no"
+
+  cardano-node:
+    image: ${CARDANO_IMAGE}
+    container_name: cardano-node
+    user: "${DATA_UID:-1000}:${DATA_GID:-1000}"
+    depends_on:
+      mithril-bootstrap:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NETWORK=preprod
+      - CARDANO_NODE_SOCKET_PATH=/ipc/node.socket
+    volumes:
+      - ${DATA_DIR}/cardano/ipc:/ipc
+      - ${DATA_DIR}/cardano:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "test -S /ipc/node.socket || exit 1; case \"$$(cardano-cli query tip --testnet-magic ${HYDRA_NETWORK_MAGIC} --socket-path /ipc/node.socket 2>&1)\" in *\\\"syncProgress\\\":\\ \\\"100.00\\\"*) exit 0 ;; *) exit 1 ;; esac",
+        ]
+      interval: 15s
+      timeout: 10s
+      start_period: 300s
+      retries: 40
+
+  hydra-node-1:
+    image: ${HYDRA_NODE_IMAGE}
+    container_name: hydra-node-1
+    depends_on:
+      hydra-keys:
+        condition: service_completed_successfully
+      cardano-node:
+        condition: service_healthy
+    command:
+      - --node-id
+      - "1"
+      - --api-host
+      - 0.0.0.0
+      - --api-port
+      - "4001"
+      - --monitoring-port
+      - "6001"
+      - --listen
+      - 0.0.0.0:5001
+      - --advertise
+      - hydra-node-1:5001
+      - --peer
+      - hydra-node-2:5002
+      - --hydra-signing-key
+      - /keys/1/hydra.sk
+      - --hydra-verification-key
+      - /keys/2/hydra.vk
+      - --cardano-signing-key
+      - /keys/1/cardano.skey
+      - --cardano-verification-key
+      - /keys/2/cardano.vkey
+      - --node-socket
+      - /ipc/node.socket
+      - --testnet-magic
+      - "${HYDRA_NETWORK_MAGIC}"
+      - --ledger-protocol-parameters
+      - /parameters/protocol-parameters.json
+      - --hydra-scripts-tx-id
+      - "${HYDRA_SCRIPTS_TX_ID}"
+      - --persistence-dir
+      - /data
+    environment:
+      - CARDANO_NODE_SOCKET_PATH=/ipc/node.socket
+    volumes:
+      - ${DATA_DIR}/cardano/ipc:/ipc
+      - ${DATA_DIR}/keys/1:/keys/1
+      - ${DATA_DIR}/keys/2:/keys/2
+      - ${DATA_DIR}/hydra/1:/data
+      - ./parameters:/parameters
+    ports:
+      - "4001:4001"
+      - "5001:5001"
+      - "6001:6001"
+    restart: unless-stopped
+
+  hydra-node-2:
+    image: ${HYDRA_NODE_IMAGE}
+    container_name: hydra-node-2
+    depends_on:
+      hydra-keys:
+        condition: service_completed_successfully
+      cardano-node:
+        condition: service_healthy
+    command:
+      - --node-id
+      - "2"
+      - --api-host
+      - 0.0.0.0
+      - --api-port
+      - "4002"
+      - --monitoring-port
+      - "6002"
+      - --listen
+      - 0.0.0.0:5002
+      - --advertise
+      - hydra-node-2:5002
+      - --peer
+      - hydra-node-1:5001
+      - --hydra-signing-key
+      - /keys/2/hydra.sk
+      - --hydra-verification-key
+      - /keys/1/hydra.vk
+      - --cardano-signing-key
+      - /keys/2/cardano.skey
+      - --cardano-verification-key
+      - /keys/1/cardano.vkey
+      - --node-socket
+      - /ipc/node.socket
+      - --testnet-magic
+      - "${HYDRA_NETWORK_MAGIC}"
+      - --ledger-protocol-parameters
+      - /parameters/protocol-parameters.json
+      - --hydra-scripts-tx-id
+      - "${HYDRA_SCRIPTS_TX_ID}"
+      - --persistence-dir
+      - /data
+    environment:
+      - CARDANO_NODE_SOCKET_PATH=/ipc/node.socket
+    volumes:
+      - ${DATA_DIR}/cardano/ipc:/ipc
+      - ${DATA_DIR}/keys/1:/keys/1
+      - ${DATA_DIR}/keys/2:/keys/2
+      - ${DATA_DIR}/hydra/2:/data
+      - ./parameters:/parameters
+    ports:
+      - "4002:4002"
+      - "5002:5002"
+      - "6002:6002"
+    restart: unless-stopped
+
+  open-hydra-head:
+    build:
+      context: ./setup/open-hydra-head/
+      dockerfile: Dockerfile
+    container_name: open-hydra-head
+    environment:
+      - BLOCKFROST_API_KEY=${BLOCKFROST_API_KEY}
+      - KEYS_DIR=/data/keys
+      - HYDRA_NODE_1_API=http://hydra-node-1:4001
+      - HYDRA_NODE_1_WS=ws://hydra-node-1:4001
+      - HYDRA_NODE_2_API=http://hydra-node-2:4002
+      - HYDRA_NODE_2_WS=ws://hydra-node-2:4002
+      - HYDRA_NETWORK_ID=${HYDRA_NETWORK_ID:-0}
+    volumes:
+      - ${DATA_DIR}/keys:/data/keys
+    depends_on:
+      hydra-node-1:
+        condition: service_started
+      hydra-node-2:
+        condition: service_started
+    restart: "no"
+
+  paper-server-1:
+    image: itzg/minecraft-server:latest
+    container_name: paper-server-1
+    environment:
+      - EULA=TRUE
+      - TYPE=PAPER
+    ports:
+      - "25565:25565"
+    volumes:
+      - ${DATA_DIR}/minecraft/1:/data
+      - ./plugins:/plugins
+    depends_on:
+      open-hydra-head:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  paper-server-2:
+    image: itzg/minecraft-server:latest
+    container_name: paper-server-2
+    environment:
+      - EULA=TRUE
+      - TYPE=PAPER
+    ports:
+      - "25566:25565"
+    volumes:
+      - ${DATA_DIR}/minecraft/2:/data
+      - ./plugins:/plugins
+    depends_on:
+      open-hydra-head:
+        condition: service_completed_successfully
+    restart: unless-stopped

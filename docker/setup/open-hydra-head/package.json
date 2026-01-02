@@ -1,0 +1,25 @@
+{
+  "name": "open-hydra-head",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open a Hydra head and commit funding UTxOs using the local Hydra stack",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "run": "npm run build && node dist/index.js"
+  },
+  "dependencies": {
+    "@meshsdk/core": "1.9.0-beta.89",
+    "@meshsdk/hydra": "1.9.0-beta.89",
+    "axios": "^1.7.4",
+    "dotenv": "^16.4.5",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/ws": "^8.5.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

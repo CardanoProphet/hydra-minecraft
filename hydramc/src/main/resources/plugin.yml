@@ -1,0 +1,4 @@
+name: hydramc
+version: '1.0-SNAPSHOT'
+main: org.hydramc.hydramc.Hydramc
+api-version: '1.21'
