@@ -232,11 +232,15 @@ services:
     environment:
       - EULA=TRUE
       - TYPE=PAPER
+      - HYDRA_API_URL=http://hydra-node-1:4001
+      - HYDRA_KEYS_DIR=/keys
+      - HYDRA_KEY_INDEX=1
     ports:
       - "25565:25565"
     volumes:
       - ${DATA_DIR}/minecraft/1:/data
       - ./plugins:/plugins
+      - ${DATA_DIR}/keys:/keys:ro
     depends_on:
       open-hydra-head:
         condition: service_completed_successfully
@@ -248,11 +252,15 @@ services:
     environment:
       - EULA=TRUE
       - TYPE=PAPER
+      - HYDRA_API_URL=http://hydra-node-2:4002
+      - HYDRA_KEYS_DIR=/keys
+      - HYDRA_KEY_INDEX=2
     ports:
       - "25566:25565"
     volumes:
       - ${DATA_DIR}/minecraft/2:/data
       - ./plugins:/plugins
+      - ${DATA_DIR}/keys:/keys:ro
     depends_on:
       open-hydra-head:
         condition: service_completed_successfully

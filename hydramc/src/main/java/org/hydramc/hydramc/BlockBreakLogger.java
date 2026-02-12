@@ -11,9 +11,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class BlockBreakLogger implements Listener {
     private final JavaPlugin plugin;
+    private final HydraTxService hydraTxService;
 
-    public BlockBreakLogger(JavaPlugin plugin) {
+    public BlockBreakLogger(JavaPlugin plugin, HydraTxService hydraTxService) {
         this.plugin = plugin;
+        this.hydraTxService = hydraTxService;
     }
 
     @EventHandler
@@ -28,6 +30,13 @@ public class BlockBreakLogger implements Listener {
 
         String message = String.format("Block broken: %s [%s] at %s in %s", blockName, blockId, coordinates, worldName);
         Bukkit.getServer().broadcastMessage(message);
+        Bukkit.getServer().broadcastMessage("v1.0.1");
+
+        if (hydraTxService != null) {
+            hydraTxService.submitBlockEvent(
+                HydraEvent.blockBreak(event.getPlayer().getName(), blockName, blockId, worldName, location)
+            );
+        }
     }
 
     @EventHandler
@@ -42,5 +51,11 @@ public class BlockBreakLogger implements Listener {
 
         String message = String.format("Block placed: %s [%s] at %s in %s", blockName, blockId, coordinates, worldName);
         Bukkit.getServer().broadcastMessage(message);
+
+        if (hydraTxService != null) {
+            hydraTxService.submitBlockEvent(
+                HydraEvent.blockPlace(event.getPlayer().getName(), blockName, blockId, worldName, location)
+            );
+        }
     }
 }
