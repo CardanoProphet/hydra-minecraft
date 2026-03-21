@@ -4,11 +4,17 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Hydramc extends JavaPlugin {
     private HydraTxService hydraTxService;
+    private HydraConfig hydraConfig;
 
     @Override
     public void onEnable() {
-        hydraTxService = new HydraTxService(this, HydraConfig.fromEnv());
-        getServer().getPluginManager().registerEvents(new BlockBreakLogger(this, hydraTxService), this);
+        hydraConfig = HydraConfig.fromEnv();
+        hydraTxService = new HydraTxService(this, hydraConfig);
+        hydraTxService.startListening();
+        getServer().getPluginManager().registerEvents(
+            new BlockBreakLogger(this, hydraTxService, hydraConfig.isLoggingEnabled()),
+            this
+        );
     }
 
     @Override

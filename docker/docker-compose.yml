@@ -235,6 +235,10 @@ services:
       - HYDRA_API_URL=http://hydra-node-1:4001
       - HYDRA_KEYS_DIR=/keys
       - HYDRA_KEY_INDEX=1
+      - DIFFICULTY=peaceful
+      - SEED="4504535438041489910"
+      - SERVER_NAME="HydraMC 1"
+      - LOGGING_ENABLED=true
     ports:
       - "25565:25565"
     volumes:
@@ -255,6 +259,10 @@ services:
       - HYDRA_API_URL=http://hydra-node-2:4002
       - HYDRA_KEYS_DIR=/keys
       - HYDRA_KEY_INDEX=2
+      - DIFFICULTY=peaceful
+      - SEED="4504535438041489910"
+      - SERVER_NAME="HydraMC 2"
+      - LOGGING_ENABLED=true
     ports:
       - "25566:25565"
     volumes:

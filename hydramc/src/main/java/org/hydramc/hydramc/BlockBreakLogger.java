@@ -12,10 +12,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class BlockBreakLogger implements Listener {
     private final JavaPlugin plugin;
     private final HydraTxService hydraTxService;
+    private final boolean loggingEnabled;
 
-    public BlockBreakLogger(JavaPlugin plugin, HydraTxService hydraTxService) {
+    public BlockBreakLogger(JavaPlugin plugin, HydraTxService hydraTxService, boolean loggingEnabled) {
         this.plugin = plugin;
         this.hydraTxService = hydraTxService;
+        this.loggingEnabled = loggingEnabled;
     }
 
     @EventHandler
@@ -29,8 +31,7 @@ public class BlockBreakLogger implements Listener {
         String coordinates = String.format("(%d, %d, %d)", location.getBlockX(), location.getBlockY(), location.getBlockZ());
 
         String message = String.format("Block broken: %s [%s] at %s in %s", blockName, blockId, coordinates, worldName);
-        Bukkit.getServer().broadcastMessage(message);
-        Bukkit.getServer().broadcastMessage("v1.0.1");
+        broadcast(message);
 
         if (hydraTxService != null) {
             hydraTxService.submitBlockEvent(
@@ -50,12 +51,18 @@ public class BlockBreakLogger implements Listener {
         String coordinates = String.format("(%d, %d, %d)", location.getBlockX(), location.getBlockY(), location.getBlockZ());
 
         String message = String.format("Block placed: %s [%s] at %s in %s", blockName, blockId, coordinates, worldName);
-        Bukkit.getServer().broadcastMessage(message);
+        broadcast(message);
 
         if (hydraTxService != null) {
             hydraTxService.submitBlockEvent(
                 HydraEvent.blockPlace(event.getPlayer().getName(), blockName, blockId, worldName, location)
             );
+        }
+    }
+
+    private void broadcast(String message) {
+        if (loggingEnabled) {
+            Bukkit.getServer().broadcastMessage(message);
         }
     }
 }

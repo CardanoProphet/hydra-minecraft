@@ -7,6 +7,8 @@ docker/setup/check-balance/dist
 docker/setup/generate-keys/node_modules
 docker/setup/generate-keys/dist
 docker/setup/generate-keys/keys
+docker/setup/load-test/node_modules
+docker/setup/load-test/dist
 docker/setup/open-hydra-head/node_modules
 docker/setup/open-hydra-head/dist
 

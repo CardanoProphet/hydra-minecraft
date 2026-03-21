@@ -60,6 +60,20 @@ public final class HydraEvent {
         return from(Type.BLOCK_PLACE, playerName, blockName, blockId, worldName, location);
     }
 
+    public static HydraEvent fromMetadata(
+        Type type,
+        String playerName,
+        String blockName,
+        String blockId,
+        String worldName,
+        int x,
+        int y,
+        int z,
+        long timestampMs
+    ) {
+        return new HydraEvent(type, playerName, blockName, blockId, worldName, x, y, z, timestampMs);
+    }
+
     private static HydraEvent from(
         Type type,
         String playerName,
