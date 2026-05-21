@@ -239,6 +239,7 @@ services:
       - SEED="4504535438041489910"
       - SERVER_NAME="HydraMC 1"
       - LOGGING_ENABLED=true
+      - VERSION=1.21.1
     ports:
       - "25565:25565"
     volumes:
@@ -263,6 +264,7 @@ services:
       - SEED="4504535438041489910"
       - SERVER_NAME="HydraMC 2"
       - LOGGING_ENABLED=true
+      - VERSION=1.21.1
     ports:
       - "25566:25565"
     volumes:
